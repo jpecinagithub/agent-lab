@@ -14,6 +14,7 @@ export function Settings() {
   const [testing, setTesting] = useState(false);
   const q = settings.qwen;
   const L = settings.limits;
+  const usesManagedProxy = q.endpoint === DEFAULT_ENDPOINT;
 
   const saveKey = () => {
     setApiKey(keyInput);
@@ -25,7 +26,6 @@ export function Settings() {
 
   const testConnection = async () => {
     const key = sessionGet('qwen_key', '');
-    if (!key) { pushNotice('error', 'No API key stored — enter one first.'); return; }
     setTesting(true);
     try {
       const client = new QwenClient({ endpoint: q.endpoint, apiKey: key, model: q.model, temperature: q.temperature, maxTokens: 64, timeoutMs: 25000 });
@@ -43,8 +43,8 @@ export function Settings() {
   return (
     <div className="page">
       <div className="warn-banner">
-        <b>Educational mode:</b> API keys stored in the browser are suitable for local experimentation but should not be used as a production security architecture.
-        Keys are kept in <b>sessionStorage</b> (this tab only) and never written to disk or sent anywhere except your configured endpoint.
+        <b>Secure deployment:</b> on Vercel, the Qwen API key is read from <b>QWEN_API_KEY</b> by the serverless proxy and is never included in the browser bundle.
+        The optional token below is kept in <b>sessionStorage</b> and can protect access to that proxy.
       </div>
 
       <div className="card">
@@ -80,15 +80,15 @@ export function Settings() {
                 <input className="input" type="number" min="64" max="32000" value={q.maxTokens} onChange={(e) => setQ({ maxTokens: parseInt(e.target.value, 10) || 2000 })} />
               </label>
             </div>
-            <label className="field"><span>API key {hasKey ? <span className="badge b-success">stored in this tab</span> : <span className="badge">not stored</span>}</span>
+            <label className="field"><span>Proxy access token / local API key {hasKey ? <span className="badge b-success">stored in this tab</span> : usesManagedProxy ? <span className="badge b-success">server environment</span> : <span className="badge">not stored</span>}</span>
               <div style={{ display: 'flex', gap: 8 }}>
-                <input className="input" type="password" value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="sk-… / DashScope API key" autoComplete="off" />
+                <input className="input" type="password" value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="Optional access token; required if AGENT_LAB_ACCESS_TOKEN is set" autoComplete="off" />
                 <button className="btn btn-primary" onClick={saveKey}>Store</button>
                 {hasKey && <button className="btn" onClick={clearKey}>Clear</button>}
               </div>
             </label>
             <div className="btn-row">
-              <button className="btn" disabled={testing || !hasKey} onClick={testConnection}>{testing ? 'Testing…' : 'Test connection'}</button>
+              <button className="btn" disabled={testing || (!hasKey && !usesManagedProxy)} onClick={testConnection}>{testing ? 'Testing…' : 'Test connection'}</button>
               <button className="btn" onClick={() => setQ({ endpoint: DEFAULT_ENDPOINT })}>Reset endpoint</button>
             </div>
           </>

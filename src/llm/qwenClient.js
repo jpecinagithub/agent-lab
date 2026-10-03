@@ -5,7 +5,7 @@ import { createStreamParser } from './streamParser.js';
 
 export const DEFAULT_ENDPOINT = 'https://ws-vtekyiqw1t5v66sm.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1';
 export const DEFAULT_MODEL = 'qwen3.8-flash';
-const LOCAL_PROXY_ENDPOINT = '/api/qwen';
+const MANAGED_PROXY_ENDPOINT = '/api/qwen';
 
 export class QwenError extends Error {
   constructor(message, code) {
@@ -24,19 +24,16 @@ export class QwenClient {
     this.timeoutMs = timeoutMs;
   }
 
+  get usesManagedProxy() { return this.endpoint === DEFAULT_ENDPOINT; }
+
   get url() {
-    // Alibaba's MaaS endpoint does not allow browser-origin CORS requests.
-    // During local Vite dev/preview, use the same-origin proxy configured in
-    // vite.config.js while keeping the real endpoint visible in Settings.
-    const isLocalBrowser = typeof window !== 'undefined' &&
-      (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost');
-    const base = isLocalBrowser && this.endpoint === DEFAULT_ENDPOINT
-      ? LOCAL_PROXY_ENDPOINT
-      : this.endpoint;
-    return `${base}/chat/completions`;
+    // The same-origin route is handled by Vite locally and by api/qwen.js on
+    // Vercel. This avoids CORS and keeps the production API key server-side.
+    if (this.usesManagedProxy) return MANAGED_PROXY_ENDPOINT;
+    return `${this.endpoint}/chat/completions`;
   }
 
-  hasKey() { return Boolean(this.apiKey); }
+  hasKey() { return this.usesManagedProxy || Boolean(this.apiKey); }
 
   toOpenAITools(tools) {
     return (tools || [])
@@ -80,7 +77,7 @@ export class QwenClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.apiKey}`
+          ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {})
         },
         body: JSON.stringify(body),
         signal: combined
