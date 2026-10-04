@@ -16,6 +16,7 @@ import { SystemPrompt } from './pages/SystemPrompt.jsx';
 import { Observability } from './pages/Observability.jsx';
 import { History } from './pages/History.jsx';
 import { Settings } from './pages/Settings.jsx';
+import { Author } from './pages/Author.jsx';
 
 const TITLES = {
   dashboard: ['Dashboard', 'Overview of your agent laboratory'],
@@ -29,13 +30,14 @@ const TITLES = {
   system: ['System Prompt', 'Standing instructions for the model'],
   observability: ['Observability', 'Metrics for every run'],
   history: ['History', 'Past runs with full traces'],
-  settings: ['Settings', 'Model, guardrails and local data']
+  settings: ['Settings', 'Model, guardrails and local data'],
+  author: ['Author', 'About the creator of this lab']
 };
 
 const VIEWS = {
   dashboard: Dashboard, agent: Agent, trace: Trace, architecture: Architecture,
   tools: Tools, mcp: Mcp, memory: Memory, skills: Skills, system: SystemPrompt,
-  observability: Observability, history: History, settings: Settings
+  observability: Observability, history: History, settings: Settings, author: Author
 };
 
 function Notices() {

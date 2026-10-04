@@ -16,7 +16,9 @@ const NAV = [
   { group: 'INSIGHT' },
   { id: 'observability', label: 'Observability' },
   { id: 'history', label: 'History' },
-  { id: 'settings', label: 'Settings' }
+  { id: 'settings', label: 'Settings' },
+  { group: 'ABOUT' },
+  { id: 'author', label: 'Author' }
 ];
 
 export function Sidebar() {
