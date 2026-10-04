@@ -13,8 +13,10 @@ import { McpRegistry } from '../mcp/mcpRegistry.js';
 import { registerMcpTools, unregisterMcpTools } from '../mcp/mcpAdapter.js';
 import { AgentRuntime } from '../agent/agentRuntime.js';
 import { STATE_META } from '../agent/agentState.js';
-import { DEFAULT_SYSTEM_PROMPT } from '../config.js';
+import { DEFAULT_SYSTEM_PROMPT, DEFAULT_GMAIL_CLIENT_ID } from '../config.js';
 import { DEFAULT_ENDPOINT, DEFAULT_MODEL } from '../llm/qwenClient.js';
+import { getGmailNativeTools } from '../tools/gmailNative.js';
+import { connectGmailAccount, clearGmailToken, isGmailConnected } from '../tools/gmailAuth.js';
 import { storeGet, storeSet, sessionSet } from '../utils/storage.js';
 import { uid } from '../utils/id.js';
 
@@ -24,6 +26,7 @@ export const useAgent = () => useContext(AgentCtx);
 const DEFAULT_SETTINGS = {
   llmMode: 'demo',
   qwen: { endpoint: DEFAULT_ENDPOINT, model: DEFAULT_MODEL, temperature: 0.7, maxTokens: 2000 },
+  gmail: { clientId: DEFAULT_GMAIL_CLIENT_ID },
   limits: { maxIterations: 10, maxToolCalls: 25, timeoutMs: 180000, toolTimeoutMs: 30000, maxContextSize: 60000 },
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   stepMode: false
@@ -49,6 +52,7 @@ function loadSettings() {
     ...DEFAULT_SETTINGS,
     ...saved,
     qwen: { ...DEFAULT_SETTINGS.qwen, ...savedQwen, endpoint, model },
+    gmail: { ...DEFAULT_SETTINGS.gmail, ...(saved.gmail || {}) },
     limits: { ...DEFAULT_SETTINGS.limits, ...(saved.limits || {}) }
   };
 }
@@ -75,6 +79,7 @@ export function AgentProvider({ children }) {
   const [history, setHistory] = useState(() => storeGet('history', []));
   const [runMeta, setRunMeta] = useState(null);
   const [showTutorial, setShowTutorial] = useState(() => !storeGet('tutorialSeen', false));
+  const [gmailConnected, setGmailConnected] = useState(false);
 
   const mods = useRef(null);
   if (!mods.current) {
@@ -188,7 +193,7 @@ export function AgentProvider({ children }) {
   // ---- actions ----
   const updateSettings = useCallback((patch) => {
     setSettings((s) => {
-      const n = { ...s, ...patch, qwen: { ...s.qwen, ...(patch.qwen || {}) }, limits: { ...s.limits, ...(patch.limits || {}) } };
+      const n = { ...s, ...patch, qwen: { ...s.qwen, ...(patch.qwen || {}) }, gmail: { ...s.gmail, ...(patch.gmail || {}) }, limits: { ...s.limits, ...(patch.limits || {}) } };
       storeSet('settings', n);
       return n;
     });
@@ -264,6 +269,66 @@ export function AgentProvider({ children }) {
     setHistory((h) => { const n = h.filter((r) => r.id !== id); storeSet('history', n); return n; });
   }, []);
 
+  // ---- native Gmail (real) vs simulated demo tools ----
+  // Same tool names, real handlers. Connecting swaps the SIMULATED demo
+  // versions out; disconnecting restores them. The harness never notices:
+  // it only ever sees tool names in the registry.
+  const GMAIL_TOOL_NAMES = ['gmail_search', 'gmail_get_message'];
+  const simulatedGmailBackup = useRef({});
+
+  const swapToNativeGmail = useCallback(() => {
+    for (const name of GMAIL_TOOL_NAMES) {
+      const current = registry.get(name);
+      if (current && current.source !== 'native' && !simulatedGmailBackup.current[name]) {
+        simulatedGmailBackup.current[name] = current;
+      }
+      if (current) registry.unregister(name);
+    }
+    const getClientId = () => settingsRef.current.gmail?.clientId?.trim() || DEFAULT_GMAIL_CLIENT_ID;
+    for (const def of getGmailNativeTools({ getClientId })) {
+      try { registry.register(def); } catch (e) { console.error('native gmail register failed', e); }
+    }
+  }, [registry]);
+
+  const swapToSimulatedGmail = useCallback(() => {
+    for (const name of GMAIL_TOOL_NAMES) {
+      const current = registry.get(name);
+      if (current && current.source === 'native') registry.unregister(name);
+      const backup = simulatedGmailBackup.current[name];
+      if (backup && !registry.has(name)) {
+        try { registry.register(backup); } catch (e) { console.error('gmail restore failed', e); }
+        delete simulatedGmailBackup.current[name];
+      }
+    }
+  }, [registry]);
+
+  const connectGmail = useCallback(async () => {
+    const clientId = (settingsRef.current.gmail?.clientId || '').trim() || DEFAULT_GMAIL_CLIENT_ID;
+    await connectGmailAccount(clientId); // throws if the user cancels or it fails
+    swapToNativeGmail();
+    setGmailConnected(true);
+    pushNotice('info', 'Gmail connected. gmail_search and gmail_get_message now read your real inbox (read-only scope).');
+  }, [swapToNativeGmail, pushNotice]);
+
+  const disconnectGmail = useCallback(() => {
+    clearGmailToken();
+    swapToSimulatedGmail();
+    setGmailConnected(false);
+    pushNotice('info', 'Gmail disconnected. The SIMULATED demo tools are back in the registry.');
+  }, [swapToSimulatedGmail, pushNotice]);
+
+  // Restore a Gmail session that survived a page reload (token in sessionStorage).
+  useEffect(() => {
+    (async () => {
+      try { await mods.current.mcpReady; } catch { /* demos still work */ }
+      if (isGmailConnected()) {
+        swapToNativeGmail();
+        setGmailConnected(true);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const dismissTutorial = useCallback(() => {
     storeSet('tutorialSeen', true);
     setShowTutorial(false);
@@ -280,8 +345,9 @@ export function AgentProvider({ children }) {
     sendMessage, runDemo, clearChat,
     mcpConnect, mcpDiscover, mcpDisconnect, mcpAdd, mcpRemove,
     saveCustomTool, deleteCustomTool,
-    showTutorial, dismissTutorial
-  }), [view, settings, updateSettings, setApiKey, ui, traceVersion, logger, runtime, registry, memory, skills, permissions, mcpRegistry, chat, notices, pushNotice, dismissNotice, pendingApproval, streaming, contextInfo, runMeta, history, clearHistory, deleteRun, toolsVersion, memVersion, mcpVersion, sendMessage, runDemo, clearChat, mcpConnect, mcpDiscover, mcpDisconnect, mcpAdd, mcpRemove, saveCustomTool, deleteCustomTool, showTutorial, dismissTutorial]);
+    showTutorial, dismissTutorial,
+    gmailConnected, connectGmail, disconnectGmail
+  }), [view, settings, updateSettings, setApiKey, ui, traceVersion, logger, runtime, registry, memory, skills, permissions, mcpRegistry, chat, notices, pushNotice, dismissNotice, pendingApproval, streaming, contextInfo, runMeta, history, clearHistory, deleteRun, toolsVersion, memVersion, mcpVersion, sendMessage, runDemo, clearChat, mcpConnect, mcpDiscover, mcpDisconnect, mcpAdd, mcpRemove, saveCustomTool, deleteCustomTool, showTutorial, dismissTutorial, gmailConnected, connectGmail, disconnectGmail]);
 
   return <AgentCtx.Provider value={value}>{children}</AgentCtx.Provider>;
 }

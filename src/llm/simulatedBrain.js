@@ -109,8 +109,10 @@ export function createSimulatedAdapter() {
       // ---- act phase ----
       const failed = lastFailed(obs);
       if (failed) {
+        const failedTool = (tools || []).find((t) => t.name === failed.tool);
+        const origin = failed.simulated ? 'a SIMULATED tool' : (failedTool && failedTool.source === 'native' ? 'a NATIVE tool' : 'a tool');
         return finalAnswer(
-          `I ran into a problem while using the tool "${failed.tool}": ${failed.error || 'unknown error'}. ` +
+          `I ran into a problem while using ${origin} "${failed.tool}": ${failed.error || 'unknown error'}. ` +
           `The harness caught the error so the run could end gracefully instead of crashing. ` +
           `(This is the simulated demo model. Connect Qwen in Settings to retry with a real model.)`
         );
@@ -169,7 +171,10 @@ export function createSimulatedAdapter() {
         const gObs = observed(obs, 'gmail_search');
         const msgs = gObs?.success ? (gObs.data?.messages || []) : [];
         const actionable = msgs.filter((m) => m.requiresAction);
-        let text = `I checked your inbox (SIMULATED Gmail MCP demo — ${msgs.length} recent messages).\n\n`;
+        const gmailTool = (tools || []).find((t) => t.name === 'gmail_search');
+        const realGmail = gmailTool && gmailTool.source === 'native';
+        const gmailLabel = realGmail ? 'REAL Gmail via the Gmail API' : 'SIMULATED Gmail MCP demo';
+        let text = `I checked your inbox (${gmailLabel} — ${msgs.length} recent messages).\n\n`;
         text += actionable.length
           ? `Messages that require action:\n${actionable.map((m) => `• ${m.subject} — from ${m.from} (${m.why})`).join('\n')}`
           : 'Nothing in the recent messages looks like it requires action.';

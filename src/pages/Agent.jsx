@@ -27,7 +27,7 @@ function ChatBubble({ msg }) {
 export function Agent() {
   const {
     ui, chat, streaming, sendMessage, clearChat, runDemo, runtime,
-    settings, runMeta, contextInfo, registry
+    settings, runMeta, contextInfo, registry, gmailConnected
   } = useAgent();
   const [input, setInput] = useState('');
   const logRef = useRef(null);
@@ -62,7 +62,10 @@ export function Agent() {
             <p className="hint">Type a request — or run a guided demo. Watch the <b>Live Harness</b> panel on the right as the loop runs.</p>
             <div className="demo-row">
               <button className="demo-chip" disabled={running} onClick={() => runDemo('calc')}>demo: {DEMO_PROMPTS.calc}</button>
-              <button className="demo-chip" disabled={running} onClick={() => runDemo('email')}>demo: {DEMO_PROMPTS.email}</button>
+              <button className="demo-chip" disabled={running} onClick={() => runDemo('email')}>
+                {gmailConnected && <span className="badge b-native" style={{ marginRight: 6 }}>REAL Gmail</span>}
+                demo: {DEMO_PROMPTS.email}
+              </button>
               <button className="demo-chip" disabled={running} onClick={() => runDemo('browser')}>demo: {DEMO_PROMPTS.browser}</button>
             </div>
             <div className="chat-log" ref={logRef}>

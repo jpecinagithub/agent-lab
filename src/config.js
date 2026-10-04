@@ -3,6 +3,10 @@
 export const APP_NAME = 'Agent Lab';
 export const APP_TAGLINE = 'Watch an AI agent think: User → Harness → LLM → Decision → Tool → Observation → Final Answer.';
 
+// Public by design: a Google OAuth Client ID only identifies the app to Google,
+// it is not a secret. Pre-filled for convenience; replace it in Settings → Gmail.
+export const DEFAULT_GMAIL_CLIENT_ID = '394665133987-vi6brentimvcocdg0hb25olhaq9pr047.apps.googleusercontent.com';
+
 export const DEFAULT_SYSTEM_PROMPT = `You are the reasoning core of an educational AI agent harness called Agent Lab.
 
 Your role:

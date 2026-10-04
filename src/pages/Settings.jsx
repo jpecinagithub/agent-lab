@@ -3,16 +3,18 @@ import { useAgent } from '../state/AgentContext.jsx';
 import { InfoIcon } from '../components/InfoIcon.jsx';
 import { QwenClient, DEFAULT_ENDPOINT, DEFAULT_MODEL } from '../llm/qwenClient.js';
 import { sessionGet, sessionRemove, storeGet } from '../utils/storage.js';
-import { DEFAULT_SYSTEM_PROMPT } from '../config.js';
+import { DEFAULT_SYSTEM_PROMPT, DEFAULT_GMAIL_CLIENT_ID } from '../config.js';
 
 const QWEN_MODELS = [DEFAULT_MODEL];
 
 export function Settings() {
-  const { settings, updateSettings, setApiKey, pushNotice, memory, clearHistory, dismissTutorial } = useAgent();
+  const { settings, updateSettings, setApiKey, pushNotice, memory, clearHistory, dismissTutorial, gmailConnected, connectGmail, disconnectGmail } = useAgent();
   const [keyInput, setKeyInput] = useState('');
   const [hasKey, setHasKey] = useState(() => Boolean(sessionGet('qwen_key', '')));
   const [testing, setTesting] = useState(false);
+  const [gmailBusy, setGmailBusy] = useState(false);
   const q = settings.qwen;
+  const g = settings.gmail || {};
   const L = settings.limits;
   const usesManagedProxy = q.endpoint === DEFAULT_ENDPOINT;
 
@@ -93,6 +95,33 @@ export function Settings() {
             </div>
           </>
         )}
+      </div>
+
+      <div className="card">
+        <h3>Gmail — native tools <InfoIcon topic="tools" /></h3>
+        <p className="hint">
+          Connect your Google account to replace the <span className="badge b-sim">SIMULATED</span> demo
+          versions of <b>gmail_search</b> and <b>gmail_get_message</b> with <span className="badge b-native">NATIVE</span> tools
+          that call the real Gmail API (read-only scope). No MCP involved — the browser talks to Google directly.
+          The OAuth token lives in <b>sessionStorage</b> (this tab only).
+        </p>
+        <label className="field"><span>Google OAuth Client ID (public — it only identifies the app)</span>
+          <input className="input" value={g.clientId || ''} onChange={(e) => updateSettings({ gmail: { clientId: e.target.value } })} placeholder={DEFAULT_GMAIL_CLIENT_ID} autoComplete="off" spellCheck="false" />
+        </label>
+        <div className="btn-row">
+          {!gmailConnected ? (
+            <button className="btn btn-primary" disabled={gmailBusy} onClick={async () => {
+              setGmailBusy(true);
+              try { await connectGmail(); }
+              catch (e) { pushNotice('error', `Gmail connection failed: ${e.message}`); }
+              setGmailBusy(false);
+            }}>{gmailBusy ? 'Connecting…' : 'Connect Gmail'}</button>
+          ) : (
+            <button className="btn btn-danger" onClick={disconnectGmail}>Disconnect Gmail</button>
+          )}
+          <button className="btn" onClick={() => updateSettings({ gmail: { clientId: DEFAULT_GMAIL_CLIENT_ID } })}>Reset Client ID</button>
+          <span className={`badge ${gmailConnected ? 'b-success' : ''}`}>{gmailConnected ? 'connected — real Gmail tools active' : 'not connected — simulated tools active'}</span>
+        </div>
       </div>
 
       <div className="card">
