@@ -62,7 +62,7 @@ export default function App() {
   const { view, ui, settings, runMeta } = useAgent();
   const [title, sub] = TITLES[view] || TITLES.dashboard;
   const View = VIEWS[view] || Dashboard;
-  const modelLabel = runMeta?.modelLabel || (settings.llmMode === 'spark' ? 'Muse Spark 1.3 (OpenCode)' : 'Simulated model (demo)');
+  const modelLabel = runMeta?.modelLabel || (settings.llmMode === 'spark' ? `OpenCode · ${(settings.spark && settings.spark.model) || 'model'}` : 'Simulated model (demo)');
 
   return (
     <div className="app">

@@ -18,7 +18,7 @@ export function Settings() {
     try {
       const client = new SparkClient({ gatewayUrl: s.gatewayUrl, timeoutMs: 120000 });
       const reply = await client.ping();
-      pushNotice('info', `Connection OK — Muse Spark 1.3 replied: "${String(reply).slice(0, 80)}"`);
+      pushNotice('info', `Connection OK — model replied: "${String(reply).slice(0, 80)}"`);
     } catch (e) {
       pushNotice('error', `Connection failed: ${e.message}`);
     }
@@ -40,7 +40,7 @@ export function Settings() {
         <h3>Reasoning model</h3>
         <div className="btn-row" style={{ marginBottom: 14 }}>
           <button className={`btn ${settings.llmMode === 'demo' ? 'btn-primary' : ''}`} onClick={() => updateSettings({ llmMode: 'demo' })}>Demo mode <span className="badge b-sim">no key needed</span></button>
-          <button className={`btn ${settings.llmMode === 'spark' ? 'btn-primary' : ''}`} onClick={() => updateSettings({ llmMode: 'spark' })}>Muse Spark 1.3 <span className="badge b-success">real model · OpenCode</span></button>
+          <button className={`btn ${settings.llmMode === 'spark' ? 'btn-primary' : ''}`} onClick={() => updateSettings({ llmMode: 'spark' })}>{(s.model || DEFAULT_SPARK_MODEL)} <span className="badge b-success">real model · OpenCode</span></button>
         </div>
         {settings.llmMode === 'demo' && (
           <p className="hint">A transparent, rule-based simulated brain drives the <b>real</b> harness loop — planning, tool calls, observations, guardrails and approvals all execute for real. Every simulated model decision and tool result is labeled <span className="sim-strip">SIMULATED</span>.</p>
@@ -48,7 +48,7 @@ export function Settings() {
         {settings.llmMode === 'spark' && (
           <>
             <p className="hint">
-              The harness sends each decision to <b>{DEFAULT_SPARK_MODEL}</b> (Meta, served free via OpenCode Zen)
+              The harness sends each decision to <b>{s.model || DEFAULT_SPARK_MODEL}</b> (served free via OpenCode Zen)
               through your gateway. The gateway is text-only, so the client teaches the model a strict JSON
               tool-call protocol — the harness still owns the Tool Registry, guardrails and the trace.
             </p>

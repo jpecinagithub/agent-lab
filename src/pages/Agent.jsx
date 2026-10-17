@@ -49,7 +49,7 @@ export function Agent() {
   const order = STAGE_DEFS.map((s) => s.key);
   const activeIdx = order.indexOf(activeStage);
   const allDone = ui.state === 'COMPLETED';
-  const modelLabel = runMeta?.modelLabel || (settings.llmMode === 'spark' ? 'Muse Spark 1.3 (OpenCode)' : 'Simulated model (demo)');
+  const modelLabel = runMeta?.modelLabel || (settings.llmMode === 'spark' ? `OpenCode · ${(settings.spark && settings.spark.model) || 'model'}` : 'Simulated model (demo)');
   const actionTool = ui.currentAction ? registry.get(ui.currentAction.tool) : null;
 
   return (

@@ -35,7 +35,7 @@ const DEFAULT_SETTINGS = {
 function loadSettings() {
   const saved = storeGet('settings', {});
   // Provider switch (Oct 2026): the "real model" slot moved from Qwen/Alibaba
-  // to Muse Spark 1.3 via Jon's OpenCode gateway. Migrate stored modes.
+  // to a free OpenCode model via Jon's OpenCode gateway. Migrate stored modes.
   const llmMode = !saved.llmMode || saved.llmMode === 'demo' || saved.llmMode === 'qwen'
     ? 'spark'
     : saved.llmMode;

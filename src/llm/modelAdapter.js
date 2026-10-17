@@ -168,7 +168,7 @@ export function createQwenAdapter(client, settings = {}) {
   };
 }
 
-// Spark adapter: same harness contract, but the brain is Muse Spark 1.3 reached
+// Spark adapter: same harness contract, but the brain is an OpenCode free model reached
 // through Jon's OpenCode gateway. The gateway is text-only, so the SparkClient
 // teaches the model a JSON tool-call protocol and parses it back — the
 // adapter below then works exactly like the Qwen one.
@@ -209,7 +209,7 @@ export function createSparkAdapter(client, settings = {}) {
 
   return {
     id: 'spark',
-    label: 'Muse Spark 1.3 (OpenCode)',
+    label: `OpenCode (${client.model})`,
     isSimulated: false,
     decide: async ({ context, tools, phase, onToken }) => {
       if (phase === 'plan') return decidePlan(context, tools);

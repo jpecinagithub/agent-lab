@@ -1,10 +1,10 @@
-// SparkClient: talks to Muse Spark 1.3 through Jon's own OpenCode gateway.
+// SparkClient: talks to a free OpenCode model through Jon's own OpenCode gateway.
 //
 // Why a gateway instead of a model API: OpenCode's free tier only answers
 // inside its official client (calling the API directly returns 403
 // FreeTierError). The browser therefore POSTs to the Node gateway on Jon's
 // server — the same one spark-chat uses — which runs per request:
-//     opencode run --format json -m opencode/muse-spark-1.3-contributor-free
+//     opencode run --format json -m "$SPARK_MODEL"   (e.g. opencode/mimo-v2.6-flash-free)
 // and answers { reply, sessionId }. The API key lives in /opt/spark-chat/.env
 // on the server and never reaches the browser.
 //
@@ -12,14 +12,14 @@
 // loop keeps working because this client teaches the model a strict JSON
 // tool-call protocol inside the prompt and parses the fenced block back into
 // tool calls. The harness still owns the Tool Registry, the guardrails and
-// the trace — only the "intelligence" moved from Qwen to Muse Spark.
+// the trace — only the "intelligence" moved from Qwen to the OpenCode model.
 //
 // Interface mirrors QwenClient.chat({ messages, tools, stream, onToken, signal })
 // so adapters can treat both brains the same.
 import { tryParseJson } from '../utils/format.js';
 
 export const DEFAULT_GATEWAY_URL = 'https://jpecina.duckdns.org/spark/chat';
-export const DEFAULT_SPARK_MODEL = 'muse-spark-1.3';
+export const DEFAULT_SPARK_MODEL = 'mimo-v2.6-flash-free';
 // opencode runs can take minutes on long answers (gateway timeout is 300 s).
 const GATEWAY_TIMEOUT_MS = 300000;
 

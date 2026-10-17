@@ -218,7 +218,7 @@ export class AgentRuntime extends Emitter {
     const { adapter, simulated, reason, client } = this.resolveAdapter(settings);
     this.adapter = adapter;
     this.adapterSimulated = simulated;
-    const modelLabel = simulated ? 'Simulated model (demo)' : 'Muse Spark 1.3 (OpenCode)';
+    const modelLabel = simulated ? 'Simulated model (demo)' : `OpenCode · ${client.model}`;
     this.currentRunMeta = { runId, modelLabel, simulated, startedAt: this.startedAt, userRequest: text };
 
     this.logger.runStart(text, modelLabel);
@@ -227,7 +227,7 @@ export class AgentRuntime extends Emitter {
     if (simulated) {
       this.emit('notice', {
         kind: 'info',
-        text: 'Demo mode: a transparent simulated brain is driving the real harness loop. Select Muse Spark 1.3 in Settings for real reasoning.'
+        text: 'Demo mode: a transparent simulated brain is driving the real harness loop. Select the OpenCode model in Settings for real reasoning.'
       });
     }
 

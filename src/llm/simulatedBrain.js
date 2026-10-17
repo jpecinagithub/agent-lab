@@ -102,7 +102,7 @@ export function createSimulatedAdapter() {
         }
         return {
           kind: 'plan', objective, plan,
-          note: 'Demo brain: a transparent rule-based planner standing in for a real model. Select Muse Spark 1.3 in Settings for real reasoning.'
+          note: 'Demo brain: a transparent rule-based planner standing in for a real model. Select the OpenCode model in Settings for real reasoning.'
         };
       }
 
@@ -114,7 +114,7 @@ export function createSimulatedAdapter() {
         return finalAnswer(
           `I ran into a problem while using ${origin} "${failed.tool}": ${failed.error || 'unknown error'}. ` +
           `The harness caught the error so the run could end gracefully instead of crashing. ` +
-          `(This is the simulated demo model. Select Muse Spark 1.3 in Settings to retry with a real model.)`
+          `(This is the simulated demo model. Select the OpenCode model in Settings to retry with a real model.)`
         );
       }
 
@@ -210,7 +210,7 @@ export function createSimulatedAdapter() {
         `You said: "${truncate(request, 200)}"\n\n` +
         `I'm running in Demo mode with a simulated brain, which only handles the built-in demo scenarios ` +
         `(calculations, memory, the simulated Gmail inbox, the simulated browser, time, random numbers, fetching a URL). ` +
-        `For anything else, select Muse Spark 1.3 in Settings — then the same harness loop will reason over your request for real.`
+        `For anything else, select the OpenCode model in Settings — then the same harness loop will reason over your request for real.`
       );
     }
   };

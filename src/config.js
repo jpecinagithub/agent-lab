@@ -32,7 +32,7 @@ export const EDU = {
     body: 'The Tool Registry connects tool NAMES requested by the LLM with real executable functions. The LLM knows: tool name, description, schema. The LLM does NOT know the implementation. The harness knows: tool name → JavaScript function. This separation is what makes tool-calling safe and inspectable.'
   },
   llm: {
-    title: 'Muse Spark 1.3 = intelligence',
+    title: 'OpenCode model = intelligence',
     body: 'The LLM proposes actions but never executes them. It reads the objective, plan, memory and observations, then outputs either a tool call (structured JSON) or a final answer. All side effects happen outside the model, inside the harness.'
   },
   harness: {
