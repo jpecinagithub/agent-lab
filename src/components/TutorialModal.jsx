@@ -2,7 +2,7 @@ import React from 'react';
 import { useAgent } from '../state/AgentContext.jsx';
 
 const STEPS = [
-  { t: 'Qwen is the brain.', d: 'The model proposes actions — tool calls or a final answer — but it never executes anything itself.' },
+  { t: 'Muse Spark 1.3 is the brain.', d: 'The model proposes actions — tool calls or a final answer — but it never executes anything itself.' },
   { t: 'The harness is in control.', d: 'It builds the context, validates tool calls, checks permissions, executes tools, and loops until the task is done.' },
   { t: 'Tools give the agent capabilities.', d: 'Each tool is a real function registered by name. The model only ever sees the name, description and schema.' },
   { t: 'MCP connects external systems.', d: 'Gmail and Chrome become tools through the Model Context Protocol: connect → discover → register → call.' },
@@ -28,7 +28,7 @@ export function TutorialModal() {
         </div>
         <div className="modal-actions" style={{ justifyContent: 'flex-start', flexWrap: 'wrap' }}>
           <button className="btn btn-primary" onClick={() => { dismissTutorial(); runDemo('calc'); }}>Start demo</button>
-          <button className="btn" onClick={() => { dismissTutorial(); setView('settings'); }}>Connect Qwen</button>
+          <button className="btn" onClick={() => { dismissTutorial(); setView('settings'); }}>Connect Muse Spark</button>
           <button className="btn" onClick={dismissTutorial}>Explore on my own</button>
         </div>
       </div>

@@ -6,7 +6,7 @@ import { InfoIcon } from '../components/InfoIcon.jsx';
 import { fmtDuration, fmtTime } from '../utils/format.js';
 
 const COMPONENTS = [
-  { id: 'architecture', t: 'Model Client', d: 'Talks to Qwen. Intelligence only — it proposes, never executes.', edu: 'llm' },
+  { id: 'architecture', t: 'Model Client', d: 'Talks to Muse Spark 1.3 via OpenCode on your server. Intelligence only — it proposes, never executes.', edu: 'llm' },
   { id: 'architecture', t: 'Main Loop', d: 'LLM → action → tool → observation → LLM. Without it, just a chatbot.', edu: 'loop' },
   { id: 'tools', t: 'Tool Registry', d: 'Names → real functions. The model sees schemas; the harness holds implementations.', edu: 'toolRegistry' },
   { id: 'memory', t: 'Memory Store', d: 'Short-term for the run, long-term across runs. Inspectable at any time.', edu: 'memory' },
@@ -18,7 +18,7 @@ export function Dashboard() {
   const { setView, runDemo, registry, mcpRegistry, memory, history, ui, settings, runMeta } = useAgent();
   const tools = registry.list();
   const counts = registry.countBySource();
-  const modelLabel = runMeta?.modelLabel || (settings.llmMode === 'qwen' ? `Qwen (${settings.qwen.model})` : 'Simulated model (demo)');
+  const modelLabel = runMeta?.modelLabel || (settings.llmMode === 'spark' ? 'Muse Spark 1.3 (OpenCode)' : 'Simulated model (demo)');
 
   return (
     <div className="page">
@@ -97,7 +97,7 @@ export function Dashboard() {
           ))}
         </div>
       )}
-      <div className="foot-note">QWEN = intelligence · AGENT = goal-directed behavior · TOOLS = capabilities · MCP = external capabilities · MEMORY = persistent information · HARNESS = the system controlling everything</div>
+      <div className="foot-note">MUSE SPARK 1.3 = intelligence · AGENT = goal-directed behavior · TOOLS = capabilities · MCP = external capabilities · MEMORY = persistent information · HARNESS = the system controlling everything</div>
     </div>
   );
 }

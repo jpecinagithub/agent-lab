@@ -30,7 +30,7 @@ export function Architecture() {
   const DETAILS = {
     user: { title: 'User', edu: null, body: 'Everything starts with a human request. The harness receives it and turns it into an explicit agent objective — the contract the whole run is measured against.', view: 'agent', viewLabel: 'Open Agent' },
     goal: { title: 'Agent Goal', edu: 'objective', body: EDU.objective.body, view: 'agent', viewLabel: 'Open Agent' },
-    qwen: { title: 'Qwen — intelligence', edu: 'llm', body: EDU.llm.body, live: `Model layer: src/llm/qwenClient.js · modelAdapter.js · streamParser.js`, view: 'settings', viewLabel: 'Configure model' },
+    spark: { title: 'Muse Spark 1.3 — intelligence', edu: 'llm', body: EDU.llm.body, live: `Model layer: src/llm/sparkClient.js · modelAdapter.js (JSON tool-call protocol) · your OpenCode gateway`, view: 'settings', viewLabel: 'Configure model' },
     harness: { title: 'Harness — control', edu: 'harness', body: EDU.harness.body, live: 'Owns the state machine, the loop, permissions, limits and retries.', view: 'trace', viewLabel: 'Watch it run' },
     memory: { title: 'Memory', edu: 'memory', body: EDU.memory.body, live: `${memory.longTerm.count()} long-term fact(s) stored`, view: 'memory', viewLabel: 'Inspect memory' },
     tools: { title: 'Tools — capabilities', edu: 'toolRegistry', body: 'Tools are what the agent CAN do: calculations, memory, web fetches, browser actions, email. Each tool is a real function with a JSON schema the model can read.', live: `${registry.list().length} tool(s) registered`, view: 'tools', viewLabel: 'Open Tool Registry' },
@@ -56,7 +56,7 @@ export function Architecture() {
             <Arrow />
             <ANode id="goal" title="AGENT GOAL" sub="explicit objective" selected={selected} onClick={setSelected} />
             <Arrow />
-            <ANode id="qwen" title="QWEN" sub="intelligence · decides" selected={selected} onClick={setSelected} />
+            <ANode id="spark" title="SPARK" sub="intelligence · decides" selected={selected} onClick={setSelected} />
             <div style={{ fontSize: 10, color: 'var(--faint)', fontFamily: 'var(--mono)', padding: '2px 0' }}>tool call / answer</div>
             <Arrow />
             <ANode id="harness" title="HARNESS" sub="controls everything" selected={selected} onClick={setSelected} />
@@ -92,7 +92,7 @@ export function Architecture() {
           <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border-soft)' }}>
             <h4 style={{ fontSize: 12, letterSpacing: 1, color: 'var(--faint)', margin: '0 0 8px' }}>THE CORE PRINCIPLE</h4>
             <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
-              <b style={{ color: 'var(--text)' }}>Qwen</b> = intelligence · <b style={{ color: 'var(--text)' }}>Agent</b> = goal-directed behavior ·
+              <b style={{ color: 'var(--text)' }}>Muse Spark 1.3</b> = intelligence · <b style={{ color: 'var(--text)' }}>Agent</b> = goal-directed behavior ·
               <b style={{ color: 'var(--text)' }}> Tools</b> = capabilities · <b style={{ color: 'var(--text)' }}>MCP</b> = standardized connection to external capabilities ·
               <b style={{ color: 'var(--text)' }}> Memory</b> = persistent information · <b style={{ color: 'var(--text)' }}>Harness</b> = the system controlling everything.
             </p>

@@ -6,11 +6,10 @@ import { buildContext } from './contextManager.js';
 import { runPlanningPhase } from './planner.js';
 import { runAgentLoop, StopError } from './agentLoop.js';
 import { createSimulatedAdapter } from '../llm/simulatedBrain.js';
-import { createQwenAdapter } from '../llm/modelAdapter.js';
-import { QwenClient } from '../llm/qwenClient.js';
+import { createSparkAdapter } from '../llm/modelAdapter.js';
+import { SparkClient } from '../llm/sparkClient.js';
 import { DEFAULT_LIMITS } from '../security/guardrails.js';
 import { uid } from '../utils/id.js';
-import { sessionGet } from '../utils/storage.js';
 
 class Emitter {
   constructor() { this.map = new Map(); }
@@ -187,11 +186,9 @@ export class AgentRuntime extends Emitter {
   }
 
   resolveAdapter(settings) {
-    if (settings.llmMode === 'qwen') {
-      const apiKey = sessionGet('qwen_key', '');
-      const client = new QwenClient({ ...settings.qwen, apiKey });
-      if (client.hasKey()) return { adapter: createQwenAdapter(client, settings), simulated: false, client };
-      return { adapter: createSimulatedAdapter(), simulated: true, reason: 'NO_API_KEY' };
+    if (settings.llmMode === 'spark') {
+      const client = new SparkClient({ ...(settings.spark || {}) });
+      return { adapter: createSparkAdapter(client, settings), simulated: false, client };
     }
     return { adapter: createSimulatedAdapter(), simulated: true, reason: 'DEMO_MODE' };
   }
@@ -221,7 +218,7 @@ export class AgentRuntime extends Emitter {
     const { adapter, simulated, reason, client } = this.resolveAdapter(settings);
     this.adapter = adapter;
     this.adapterSimulated = simulated;
-    const modelLabel = simulated ? 'Simulated model (demo)' : `Qwen (${client.model})`;
+    const modelLabel = simulated ? 'Simulated model (demo)' : 'Muse Spark 1.3 (OpenCode)';
     this.currentRunMeta = { runId, modelLabel, simulated, startedAt: this.startedAt, userRequest: text };
 
     this.logger.runStart(text, modelLabel);
@@ -229,10 +226,8 @@ export class AgentRuntime extends Emitter {
     this.emit('chat', { role: 'user', content: text, ts: Date.now() });
     if (simulated) {
       this.emit('notice', {
-        kind: reason === 'NO_API_KEY' ? 'warn' : 'info',
-        text: reason === 'NO_API_KEY'
-          ? 'Qwen is selected but no API key is stored — running in Demo mode with the simulated brain. Add a key in Settings for real reasoning.'
-          : 'Demo mode: a transparent simulated brain is driving the real harness loop. Connect Qwen in Settings for real reasoning.'
+        kind: 'info',
+        text: 'Demo mode: a transparent simulated brain is driving the real harness loop. Select Muse Spark 1.3 in Settings for real reasoning.'
       });
     }
 

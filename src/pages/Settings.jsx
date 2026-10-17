@@ -1,97 +1,68 @@
 import React, { useState } from 'react';
 import { useAgent } from '../state/AgentContext.jsx';
 import { InfoIcon } from '../components/InfoIcon.jsx';
-import { QwenClient, DEFAULT_ENDPOINT, DEFAULT_MODEL } from '../llm/qwenClient.js';
-import { sessionGet, sessionRemove, storeGet } from '../utils/storage.js';
+import { SparkClient, DEFAULT_GATEWAY_URL, DEFAULT_SPARK_MODEL } from '../llm/sparkClient.js';
+import { storeGet } from '../utils/storage.js';
 import { DEFAULT_SYSTEM_PROMPT, DEFAULT_GMAIL_CLIENT_ID } from '../config.js';
 
-const QWEN_MODELS = [DEFAULT_MODEL];
-
 export function Settings() {
-  const { settings, updateSettings, setApiKey, pushNotice, memory, clearHistory, dismissTutorial, gmailConnected, connectGmail, disconnectGmail } = useAgent();
-  const [keyInput, setKeyInput] = useState('');
-  const [hasKey, setHasKey] = useState(() => Boolean(sessionGet('qwen_key', '')));
+  const { settings, updateSettings, pushNotice, memory, clearHistory, dismissTutorial, gmailConnected, connectGmail, disconnectGmail } = useAgent();
   const [testing, setTesting] = useState(false);
   const [gmailBusy, setGmailBusy] = useState(false);
-  const q = settings.qwen;
+  const s = settings.spark || {};
   const g = settings.gmail || {};
   const L = settings.limits;
-  const usesManagedProxy = q.endpoint === DEFAULT_ENDPOINT;
-
-  const saveKey = () => {
-    setApiKey(keyInput);
-    setHasKey(Boolean(keyInput));
-    setKeyInput('');
-    pushNotice('info', keyInput ? 'API key stored for this browser tab only (sessionStorage).' : 'API key cleared.');
-  };
-  const clearKey = () => { sessionRemove('qwen_key'); setHasKey(false); pushNotice('info', 'API key removed from this tab.'); };
 
   const testConnection = async () => {
-    const key = sessionGet('qwen_key', '');
     setTesting(true);
     try {
-      const client = new QwenClient({ endpoint: q.endpoint, apiKey: key, model: q.model, temperature: q.temperature, maxTokens: 64, timeoutMs: 25000 });
+      const client = new SparkClient({ gatewayUrl: s.gatewayUrl, timeoutMs: 120000 });
       const reply = await client.ping();
-      pushNotice('info', `Connection OK — model replied: "${String(reply).slice(0, 80)}"`);
+      pushNotice('info', `Connection OK — Muse Spark 1.3 replied: "${String(reply).slice(0, 80)}"`);
     } catch (e) {
       pushNotice('error', `Connection failed: ${e.message}`);
     }
     setTesting(false);
   };
 
-  const setQ = (patch) => updateSettings({ qwen: patch });
+  const setS = (patch) => updateSettings({ spark: patch });
   const setL = (patch) => updateSettings({ limits: patch });
 
   return (
     <div className="page">
       <div className="warn-banner">
-        <b>Secure deployment:</b> on Vercel, the Qwen API key is read from <b>QWEN_API_KEY</b> by the serverless proxy and is never included in the browser bundle.
-        The optional token below is kept in <b>sessionStorage</b> and can protect access to that proxy.
+        <b>Your own model backend:</b> the browser talks directly to your OpenCode gateway at the URL below
+        (the same backend spark-chat uses). No API key ever leaves your server — the gateway runs the official
+        <b> opencode CLI</b> there with the key in <b>/opt/spark-chat/.env</b>.
       </div>
 
       <div className="card">
         <h3>Reasoning model</h3>
         <div className="btn-row" style={{ marginBottom: 14 }}>
           <button className={`btn ${settings.llmMode === 'demo' ? 'btn-primary' : ''}`} onClick={() => updateSettings({ llmMode: 'demo' })}>Demo mode <span className="badge b-sim">no key needed</span></button>
-          <button className={`btn ${settings.llmMode === 'qwen' ? 'btn-primary' : ''}`} onClick={() => updateSettings({ llmMode: 'qwen' })}>Qwen (real model)</button>
+          <button className={`btn ${settings.llmMode === 'spark' ? 'btn-primary' : ''}`} onClick={() => updateSettings({ llmMode: 'spark' })}>Muse Spark 1.3 <span className="badge b-success">real model · OpenCode</span></button>
         </div>
         {settings.llmMode === 'demo' && (
           <p className="hint">A transparent, rule-based simulated brain drives the <b>real</b> harness loop — planning, tool calls, observations, guardrails and approvals all execute for real. Every simulated model decision and tool result is labeled <span className="sim-strip">SIMULATED</span>.</p>
         )}
-        {settings.llmMode === 'qwen' && (
+        {settings.llmMode === 'spark' && (
           <>
+            <p className="hint">
+              The harness sends each decision to <b>{DEFAULT_SPARK_MODEL}</b> (Meta, served free via OpenCode Zen)
+              through your gateway. The gateway is text-only, so the client teaches the model a strict JSON
+              tool-call protocol — the harness still owns the Tool Registry, guardrails and the trace.
+            </p>
             <div className="grid grid-2">
-              <label className="field"><span>API endpoint (OpenAI-compatible)</span>
-                <input className="input" value={q.endpoint} onChange={(e) => setQ({ endpoint: e.target.value })} placeholder={DEFAULT_ENDPOINT} />
+              <label className="field"><span>OpenCode gateway URL</span>
+                <input className="input" value={s.gatewayUrl || ''} onChange={(e) => setS({ gatewayUrl: e.target.value })} placeholder={DEFAULT_GATEWAY_URL} autoComplete="off" spellCheck="false" />
               </label>
               <label className="field"><span>Model</span>
-                <select className="select" value={QWEN_MODELS.includes(q.model) ? q.model : '__custom'} onChange={(e) => setQ({ model: e.target.value === '__custom' ? q.model : e.target.value })}>
-                  {QWEN_MODELS.map((m) => <option key={m} value={m}>{m}</option>)}
-                  <option value="__custom">Custom…</option>
-                </select>
+                <input className="input" value={s.model || DEFAULT_SPARK_MODEL} onChange={(e) => setS({ model: e.target.value })} autoComplete="off" spellCheck="false" />
               </label>
             </div>
-            {!QWEN_MODELS.includes(q.model) && (
-              <label className="field"><span>Custom model name</span><input className="input" value={q.model} onChange={(e) => setQ({ model: e.target.value })} /></label>
-            )}
-            <div className="grid grid-2">
-              <label className="field"><span>Temperature: {q.temperature}</span>
-                <input type="range" min="0" max="2" step="0.1" value={q.temperature} onChange={(e) => setQ({ temperature: parseFloat(e.target.value) })} style={{ width: '100%' }} />
-              </label>
-              <label className="field"><span>Max tokens</span>
-                <input className="input" type="number" min="64" max="32000" value={q.maxTokens} onChange={(e) => setQ({ maxTokens: parseInt(e.target.value, 10) || 2000 })} />
-              </label>
-            </div>
-            <label className="field"><span>Proxy access token / local API key {hasKey ? <span className="badge b-success">stored in this tab</span> : usesManagedProxy ? <span className="badge b-success">server environment</span> : <span className="badge">not stored</span>}</span>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input className="input" type="password" value={keyInput} onChange={(e) => setKeyInput(e.target.value)} placeholder="Optional access token; required if AGENT_LAB_ACCESS_TOKEN is set" autoComplete="off" />
-                <button className="btn btn-primary" onClick={saveKey}>Store</button>
-                {hasKey && <button className="btn" onClick={clearKey}>Clear</button>}
-              </div>
-            </label>
             <div className="btn-row">
-              <button className="btn" disabled={testing || (!hasKey && !usesManagedProxy)} onClick={testConnection}>{testing ? 'Testing…' : 'Test connection'}</button>
-              <button className="btn" onClick={() => setQ({ endpoint: DEFAULT_ENDPOINT })}>Reset endpoint</button>
+              <button className="btn" disabled={testing} onClick={testConnection}>{testing ? 'Testing… (can take a minute)' : 'Test connection'}</button>
+              <button className="btn" onClick={() => setS({ gatewayUrl: DEFAULT_GATEWAY_URL, model: DEFAULT_SPARK_MODEL })}>Reset gateway</button>
             </div>
           </>
         )}

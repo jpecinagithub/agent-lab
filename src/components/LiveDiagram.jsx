@@ -1,10 +1,10 @@
 import React from 'react';
 import { useAgent } from '../state/AgentContext.jsx';
 
-// Animated live view of User → Qwen → Harness → Decision → Tool → Observation.
+// Animated live view of User → Spark → Harness → Decision → Tool → Observation.
 const NODES = [
   { id: 'user', x: 130, y: 6, w: 80, h: 30, label: 'USER' },
-  { id: 'qwen', x: 130, y: 58, w: 80, h: 34, label: 'QWEN', sub: 'brain' },
+  { id: 'spark', x: 130, y: 58, w: 80, h: 34, label: 'SPARK', sub: 'brain' },
   { id: 'harness', x: 130, y: 114, w: 80, h: 34, label: 'HARNESS', sub: 'control' },
   { id: 'decision', x: 130, y: 170, w: 80, h: 30, label: 'Decision' },
   { id: 'memory', x: 14, y: 226, w: 92, h: 32, label: 'Memory' },
@@ -17,7 +17,7 @@ const NODES = [
   { id: 'gmail', x: 124, y: 398, w: 92, h: 30, label: 'Gmail', sub: 'demo' }
 ];
 const EDGES = [
-  ['user', 'qwen'], ['qwen', 'harness'], ['harness', 'decision'],
+  ['user', 'spark'], ['spark', 'harness'], ['harness', 'decision'],
   ['decision', 'memory'], ['decision', 'tool'], ['decision', 'answer'],
   ['tool', 'registry'], ['registry', 'native'], ['registry', 'mcp'],
   ['mcp', 'chrome'], ['mcp', 'gmail']
@@ -36,7 +36,7 @@ export function LiveDiagram() {
   const memTools = ['save_memory', 'search_memory', 'clear_memory'];
   switch (ui.state) {
     case 'IDLE': active.add('user'); break;
-    case 'PLANNING': active.add('qwen'); break;
+    case 'PLANNING': active.add('spark'); break;
     case 'SELECTING_ACTION': active.add('decision'); break;
     case 'EXECUTING_TOOL':
     case 'WAITING_APPROVAL': {
@@ -52,7 +52,7 @@ export function LiveDiagram() {
       break;
     }
     case 'OBSERVING': active.add('harness'); active.add('tool'); break;
-    case 'REASONING': active.add('qwen'); active.add('harness'); break;
+    case 'REASONING': active.add('spark'); active.add('harness'); break;
     case 'PAUSED': active.add('harness'); break;
     case 'COMPLETED': active.add('answer'); break;
     case 'FAILED':

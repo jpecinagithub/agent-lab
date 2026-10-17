@@ -1,5 +1,5 @@
 // MCP adapter: normalizes discovered MCP tool schemas and registers them in
-// the SAME Tool Registry as native tools, so Qwen never knows the difference.
+// the SAME Tool Registry as native tools, so the model never knows the difference.
 export function normalizeMcpSchema(inputSchema) {
   const s = inputSchema && typeof inputSchema === 'object' ? inputSchema : {};
   return {

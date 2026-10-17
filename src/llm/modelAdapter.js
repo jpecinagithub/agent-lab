@@ -7,9 +7,10 @@
 //   phase 'plan': -> { kind:'plan', objective, plan[], note }
 //   phase 'act':  -> { kind:'action', action: {type:'tool_call'|'final_answer', ...} }
 import { QwenClient, QwenError } from './qwenClient.js';
+import { SparkClient, SparkError } from './sparkClient.js';
 import { tryParseJson, truncate } from '../utils/format.js';
 
-export { QwenError };
+export { QwenError, SparkError };
 
 const PLANNER_SYSTEM = `You are the planning module of an educational AI agent harness.
 Given the user's request and the list of available tools, produce a JSON object with:
@@ -89,6 +90,27 @@ function toolsSummaryForPlanner(tools) {
     .join('\n') || '(no tools available)';
 }
 
+function parsePlanResponse(content, context) {
+  const parsed = tryParseJson(content || '');
+  if (parsed.ok && parsed.value && typeof parsed.value === 'object') {
+    const v = parsed.value;
+    return {
+      kind: 'plan',
+      objective: String(v.objective || context.userRequest || '').slice(0, 500),
+      plan: Array.isArray(v.plan) ? v.plan.map((s) => String(s).slice(0, 300)).slice(0, 8) : [],
+      note: v.note ? String(v.note).slice(0, 300) : ''
+    };
+  }
+  // Fallback: still produce a usable objective/plan instead of crashing the run.
+  return {
+    kind: 'plan',
+    objective: truncate(context.userRequest, 200),
+    plan: ['Understand the request', 'Gather needed information with tools if required', 'Produce the final answer'],
+    note: 'The model did not return structured JSON; using a generic plan.',
+    degraded: true
+  };
+}
+
 export function createQwenAdapter(client, settings = {}) {
   if (!(client instanceof QwenClient)) throw new Error('createQwenAdapter needs a QwenClient');
 
@@ -100,24 +122,7 @@ export function createQwenAdapter(client, settings = {}) {
     } catch (e) {
       throw e;
     }
-    const parsed = tryParseJson(res.content || '');
-    if (parsed.ok && parsed.value && typeof parsed.value === 'object') {
-      const v = parsed.value;
-      return {
-        kind: 'plan',
-        objective: String(v.objective || context.userRequest || '').slice(0, 500),
-        plan: Array.isArray(v.plan) ? v.plan.map((s) => String(s).slice(0, 300)).slice(0, 8) : [],
-        note: v.note ? String(v.note).slice(0, 300) : ''
-      };
-    }
-    // Fallback: still produce a usable objective/plan instead of crashing the run.
-    return {
-      kind: 'plan',
-      objective: truncate(context.userRequest, 200),
-      plan: ['Understand the request', 'Gather needed information with tools if required', 'Produce the final answer'],
-      note: 'The model did not return structured JSON; using a generic plan.',
-      degraded: true
-    };
+    return parsePlanResponse(res.content || '', context);
   }
 
   async function decideAct(context, tools, onToken) {
@@ -163,11 +168,64 @@ export function createQwenAdapter(client, settings = {}) {
   };
 }
 
+// Spark adapter: same harness contract, but the brain is Muse Spark 1.3 reached
+// through Jon's OpenCode gateway. The gateway is text-only, so the SparkClient
+// teaches the model a JSON tool-call protocol and parses it back — the
+// adapter below then works exactly like the Qwen one.
+export function createSparkAdapter(client, settings = {}) {
+  if (!(client instanceof SparkClient)) throw new Error('createSparkAdapter needs a SparkClient');
+
+  async function decidePlan(context, tools) {
+    const messages = buildPlanMessages(context, toolsSummaryForPlanner(tools));
+    const res = await client.chat({ messages, tools: [], stream: false });
+    return parsePlanResponse(res.content || '', context);
+  }
+
+  async function decideAct(context, tools, onToken) {
+    const messages = buildActMessages(context);
+    // The gateway answers whole (no true streaming); the client emulates the
+    // token flow so the UI keeps its typing effect.
+    const res = await client.chat({ messages, tools, stream: true, onToken: onToken || null });
+    const calls = (res.toolCalls || []).filter((c) => c && c.name);
+    if (calls.length > 0) {
+      return {
+        kind: 'action',
+        action: {
+          type: 'tool_calls',
+          calls: calls.map((c, i) => ({
+            id: c.id || `call_${Date.now()}_${i}`,
+            tool: c.name,
+            arguments: c.arguments || {},
+            reason: c.reason || (res.content ? truncate(res.content, 220) : 'The model selected this tool as the next step toward the objective.')
+          }))
+        }
+      };
+    }
+    return {
+      kind: 'action',
+      action: { type: 'final_answer', text: res.content || '(The model returned an empty response.)' }
+    };
+  }
+
+  return {
+    id: 'spark',
+    label: 'Muse Spark 1.3 (OpenCode)',
+    isSimulated: false,
+    decide: async ({ context, tools, phase, onToken }) => {
+      if (phase === 'plan') return decidePlan(context, tools);
+      return decideAct(context, tools, onToken);
+    }
+  };
+}
+
 // Chooses the adapter for a run. Falls back to simulation when Qwen is selected
 // but no API key is present — the UI surfaces this clearly.
 export function resolveAdapter({ mode, client, settings }) {
+  if (mode === 'spark' && client) {
+    return { adapter: createSparkAdapter(client, settings), simulated: false };
+  }
   if (mode === 'qwen' && client && client.hasKey()) {
     return { adapter: createQwenAdapter(client, settings), simulated: false };
   }
-  return { adapter: null, simulated: true, reason: mode === 'qwen' ? 'NO_API_KEY' : 'DEMO_MODE' };
+  return { adapter: null, simulated: true, reason: mode === 'spark' ? 'SPARK_UNAVAILABLE' : mode === 'qwen' ? 'NO_API_KEY' : 'DEMO_MODE' };
 }

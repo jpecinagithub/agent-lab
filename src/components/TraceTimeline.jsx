@@ -19,14 +19,14 @@ export function buildTraceNodes(events) {
         nodes.push({ kind: 'plan', title: 'PLAN', sub: `${(ev.plan || []).length} step(s) drafted`, ts: ev.ts, tone: 'b-planning', ev });
         break;
       case 'llm_call': {
-        const n = { kind: 'think', title: ev.phase === 'plan' ? 'QWEN · PLANNING' : 'QWEN · DECIDING', sub: `model: ${ev.model || '—'}`, ts: ev.ts, tone: 'b-thinking', ev, response: null };
+        const n = { kind: 'think', title: ev.phase === 'plan' ? 'SPARK · PLANNING' : 'SPARK · DECIDING', sub: `model: ${ev.model || '—'}`, ts: ev.ts, tone: 'b-thinking', ev, response: null };
         nodes.push(n);
         break;
       }
       case 'llm_response': {
         const last = [...nodes].reverse().find((n) => n.kind === 'think' && !n.response);
         if (last) { last.response = ev.summary; last.sub = truncate(ev.summary || '', 120); }
-        else nodes.push({ kind: 'think', title: 'QWEN · RESPONSE', sub: truncate(ev.summary || '', 120), ts: ev.ts, tone: 'b-thinking', ev });
+        else nodes.push({ kind: 'think', title: 'SPARK · RESPONSE', sub: truncate(ev.summary || '', 120), ts: ev.ts, tone: 'b-thinking', ev });
         break;
       }
       case 'action':

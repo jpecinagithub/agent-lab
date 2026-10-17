@@ -62,7 +62,7 @@ export default function App() {
   const { view, ui, settings, runMeta } = useAgent();
   const [title, sub] = TITLES[view] || TITLES.dashboard;
   const View = VIEWS[view] || Dashboard;
-  const modelLabel = runMeta?.modelLabel || (settings.llmMode === 'qwen' ? `Qwen (${settings.qwen.model})` : 'Simulated model (demo)');
+  const modelLabel = runMeta?.modelLabel || (settings.llmMode === 'spark' ? 'Muse Spark 1.3 (OpenCode)' : 'Simulated model (demo)');
 
   return (
     <div className="app">
@@ -74,7 +74,7 @@ export default function App() {
             <div className="sub">{sub}</div>
           </div>
           <div className="topbar-right">
-            <Badge tone={settings.llmMode === 'qwen' ? 'b-thinking' : 'b-sim'}>{modelLabel}</Badge>
+            <Badge tone={settings.llmMode === 'spark' ? 'b-thinking' : 'b-sim'}>{modelLabel}</Badge>
             <StateBadge meta={ui.meta} />
           </div>
         </header>

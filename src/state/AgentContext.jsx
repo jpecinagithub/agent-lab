@@ -14,18 +14,18 @@ import { registerMcpTools, unregisterMcpTools } from '../mcp/mcpAdapter.js';
 import { AgentRuntime } from '../agent/agentRuntime.js';
 import { STATE_META } from '../agent/agentState.js';
 import { DEFAULT_SYSTEM_PROMPT, DEFAULT_GMAIL_CLIENT_ID } from '../config.js';
-import { DEFAULT_ENDPOINT, DEFAULT_MODEL } from '../llm/qwenClient.js';
+import { DEFAULT_GATEWAY_URL, DEFAULT_SPARK_MODEL } from '../llm/sparkClient.js';
 import { getGmailNativeTools } from '../tools/gmailNative.js';
 import { connectGmailAccount, clearGmailToken, isGmailConnected } from '../tools/gmailAuth.js';
-import { storeGet, storeSet, sessionSet } from '../utils/storage.js';
+import { storeGet, storeSet } from '../utils/storage.js';
 import { uid } from '../utils/id.js';
 
 const AgentCtx = createContext(null);
 export const useAgent = () => useContext(AgentCtx);
 
 const DEFAULT_SETTINGS = {
-  llmMode: 'demo',
-  qwen: { endpoint: DEFAULT_ENDPOINT, model: DEFAULT_MODEL, temperature: 0.7, maxTokens: 2000 },
+  llmMode: 'spark',
+  spark: { gatewayUrl: DEFAULT_GATEWAY_URL, model: DEFAULT_SPARK_MODEL },
   gmail: { clientId: DEFAULT_GMAIL_CLIENT_ID },
   limits: { maxIterations: 10, maxToolCalls: 25, timeoutMs: 180000, toolTimeoutMs: 30000, maxContextSize: 60000 },
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
@@ -34,24 +34,17 @@ const DEFAULT_SETTINGS = {
 
 function loadSettings() {
   const saved = storeGet('settings', {});
-  const savedQwen = saved.qwen || {};
-  // Migrate installations that still carry one of the old preset defaults.
-  const legacyPresetModels = new Set(['qwen-plus', 'qwen-turbo', 'qwen-max', 'qwen-coder-plus', 'qwen-coder-turbo']);
-  const model = !savedQwen.model || legacyPresetModels.has(savedQwen.model)
-    ? DEFAULT_MODEL
-    : savedQwen.model;
-  const legacyEndpoints = new Set([
-    'https://dashscope-intl.aliyuncs.com/compatible-mode/v1',
-    'https://ws-vtekyiqw1t5v66sm.ap-southeast-1.maas.aliyuncs.com/v1',
-    'https://ws-vtekyiqw1t5v66sm.ap-southeast-1.maas.aliyuncs.com'
-  ]);
-  const endpoint = !savedQwen.endpoint || legacyEndpoints.has(savedQwen.endpoint)
-    ? DEFAULT_ENDPOINT
-    : savedQwen.endpoint;
+  // Provider switch (Oct 2026): the "real model" slot moved from Qwen/Alibaba
+  // to Muse Spark 1.3 via Jon's OpenCode gateway. Migrate stored modes.
+  const llmMode = !saved.llmMode || saved.llmMode === 'demo' || saved.llmMode === 'qwen'
+    ? 'spark'
+    : saved.llmMode;
+  const savedSpark = saved.spark || {};
   return {
     ...DEFAULT_SETTINGS,
     ...saved,
-    qwen: { ...DEFAULT_SETTINGS.qwen, ...savedQwen, endpoint, model },
+    llmMode,
+    spark: { ...DEFAULT_SETTINGS.spark, ...savedSpark },
     gmail: { ...DEFAULT_SETTINGS.gmail, ...(saved.gmail || {}) },
     limits: { ...DEFAULT_SETTINGS.limits, ...(saved.limits || {}) }
   };
@@ -193,14 +186,10 @@ export function AgentProvider({ children }) {
   // ---- actions ----
   const updateSettings = useCallback((patch) => {
     setSettings((s) => {
-      const n = { ...s, ...patch, qwen: { ...s.qwen, ...(patch.qwen || {}) }, gmail: { ...s.gmail, ...(patch.gmail || {}) }, limits: { ...s.limits, ...(patch.limits || {}) } };
+      const n = { ...s, ...patch, spark: { ...s.spark, ...(patch.spark || {}) }, gmail: { ...s.gmail, ...(patch.gmail || {}) }, limits: { ...s.limits, ...(patch.limits || {}) } };
       storeSet('settings', n);
       return n;
     });
-  }, []);
-
-  const setApiKey = useCallback((key) => {
-    sessionSet('qwen_key', key || '');
   }, []);
 
   const sendMessage = useCallback(async (text) => {
@@ -336,7 +325,7 @@ export function AgentProvider({ children }) {
 
   const value = useMemo(() => ({
     view, setView,
-    settings, updateSettings, setApiKey,
+    settings, updateSettings,
     ui, traceVersion, logger, runtime, registry, memory, skills, permissions, mcpRegistry,
     chat, notices, pushNotice, dismissNotice,
     pendingApproval, streaming, contextInfo, runMeta,
@@ -347,7 +336,7 @@ export function AgentProvider({ children }) {
     saveCustomTool, deleteCustomTool,
     showTutorial, dismissTutorial,
     gmailConnected, connectGmail, disconnectGmail
-  }), [view, settings, updateSettings, setApiKey, ui, traceVersion, logger, runtime, registry, memory, skills, permissions, mcpRegistry, chat, notices, pushNotice, dismissNotice, pendingApproval, streaming, contextInfo, runMeta, history, clearHistory, deleteRun, toolsVersion, memVersion, mcpVersion, sendMessage, runDemo, clearChat, mcpConnect, mcpDiscover, mcpDisconnect, mcpAdd, mcpRemove, saveCustomTool, deleteCustomTool, showTutorial, dismissTutorial, gmailConnected, connectGmail, disconnectGmail]);
+  }), [view, settings, updateSettings, ui, traceVersion, logger, runtime, registry, memory, skills, permissions, mcpRegistry, chat, notices, pushNotice, dismissNotice, pendingApproval, streaming, contextInfo, runMeta, history, clearHistory, deleteRun, toolsVersion, memVersion, mcpVersion, sendMessage, runDemo, clearChat, mcpConnect, mcpDiscover, mcpDisconnect, mcpAdd, mcpRemove, saveCustomTool, deleteCustomTool, showTutorial, dismissTutorial, gmailConnected, connectGmail, disconnectGmail]);
 
   return <AgentCtx.Provider value={value}>{children}</AgentCtx.Provider>;
 }
