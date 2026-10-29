@@ -41,21 +41,11 @@ function toolSchemasForPrompt(tools) {
 }
 
 const TOOL_PROTOCOL = `
-TOOL-CALL PROTOCOL — follow it exactly.
-You can call the tools listed below. To call one or more tools, reply with
-EXACTLY ONE fenced json block and NOTHING else outside it:
-
+TOOLS: to call tools, reply with EXACTLY ONE fenced json block and nothing else:
 \`\`\`json
-{"tool_calls": [{"name": "<tool name>", "arguments": {<arguments as a JSON object>}, "reason": "<one short sentence on why this helps>"}]}
+{"tool_calls":[{"name":"<tool name>","arguments":{},"reason":"<short why>"}]}
 \`\`\`
-
-Rules:
-- "name" MUST be exactly one of the tool names listed below.
-- "arguments" MUST be a JSON object matching that tool's parameters (use {} if it takes none).
-- You may list several tool calls in the array ONLY when they are independent of each other.
-- Do NOT narrate, explain or add any text outside the fenced block when calling tools.
-- When the objective is complete, do NOT output JSON: write the final answer as plain text for the user.
-`;
+"name" must be one of the tools above; "arguments" must match its parameters ({} if none). Several calls in the array only if independent. When the objective is complete, do NOT output JSON: reply with the final answer as plain text.`;
 
 function renderMessage(m) {
   const role = String(m.role || 'user').toUpperCase();
@@ -79,12 +69,15 @@ function renderMessage(m) {
   return `${role}:\n${m.content || ''}`;
 }
 
-function buildPrompt(messages, tools) {
+export function buildPrompt(messages, tools) {
   const parts = (messages || []).map(renderMessage).filter(Boolean);
   let prompt = parts.join('\n\n');
   const schemas = toolSchemasForPrompt(tools);
   if (schemas.length) {
-    prompt += `\n\nAVAILABLE TOOLS (JSON schemas):\n${JSON.stringify(schemas, null, 1)}${TOOL_PROTOCOL}`;
+    // Minified on purpose: the gateway enforces a message-length limit, and
+    // pretty-printed schemas wasted ~40% of it (root cause of the Oct 2026
+    // "Mensaje demasiado largo" failures — see gateway MAX_MESSAGE_LEN).
+    prompt += `\n\nAVAILABLE TOOLS (JSON schemas):\n${JSON.stringify(schemas)}${TOOL_PROTOCOL}`;
   }
   return prompt;
 }
@@ -145,7 +138,9 @@ export class SparkClient {
       res = await fetch(this.gatewayUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: prompt, messages: [{ role: 'user', content: prompt }] }),
+        // The gateway honours an allowlisted per-request `model` (free models
+        // only); without it the Settings model selector would be inert.
+        body: JSON.stringify({ message: prompt, messages: [{ role: 'user', content: prompt }], model: this.model }),
         signal: combined
       });
     } catch (e) {

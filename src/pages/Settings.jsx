@@ -16,7 +16,7 @@ export function Settings() {
   const testConnection = async () => {
     setTesting(true);
     try {
-      const client = new SparkClient({ gatewayUrl: s.gatewayUrl, timeoutMs: 120000 });
+      const client = new SparkClient({ gatewayUrl: s.gatewayUrl, model: s.model, timeoutMs: 120000 });
       const reply = await client.ping();
       pushNotice('info', `Connection OK — model replied: "${String(reply).slice(0, 80)}"`);
     } catch (e) {
